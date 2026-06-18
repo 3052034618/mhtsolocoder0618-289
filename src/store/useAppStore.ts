@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { User, Listing, Booking, Message, Post, PointRecord, DateRange, Review } from '@/types';
 import { mockCurrentUser, mockListings, mockBookings, mockMessages, mockPosts, mockPointRecords, mockUsers } from '@/services/mock/data';
 
@@ -79,7 +80,9 @@ interface AppState {
   setSearchQuery: (query: string) => void;
 }
 
-const useAppStore = create<AppState>((set, get) => ({
+const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
   currentUser: mockCurrentUser,
   isLoggedIn: true,
   users: mockUsers,
@@ -632,6 +635,12 @@ const useAppStore = create<AppState>((set, get) => ({
   
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
-}));
+    }),
+    {
+      name: 'swapee-storage',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+)
 
 export default useAppStore;

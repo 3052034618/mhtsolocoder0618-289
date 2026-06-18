@@ -12,7 +12,8 @@ import {
   Home,
   MessageSquare,
   FileText,
-  CheckCircle
+  CheckCircle,
+  X
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
 import { mockExchangeItems } from '@/services/mock/data';
@@ -21,11 +22,14 @@ export default function Points() {
   const { currentUser, pointRecords, addPoints, spendPoints } = useAppStore();
   const [activeTab, setActiveTab] = useState<'records' | 'exchange'>('records');
   const [showExchangeSuccess, setShowExchangeSuccess] = useState(false);
+  const [showInsufficientPoints, setShowInsufficientPoints] = useState(false);
   const [exchangeItemName, setExchangeItemName] = useState('');
 
   const myPointRecords = currentUser 
     ? pointRecords.filter(r => r.userId === currentUser.id)
     : [];
+  
+  const myExchangeRecords = myPointRecords.filter(r => r.source === 'exchange');
 
   const handleSignIn = () => {
     addPoints(5, '每日签到', 'signin');
@@ -34,6 +38,9 @@ export default function Points() {
 
   const handleExchange = (item: typeof mockExchangeItems[0]) => {
     if (!currentUser || currentUser.points < item.points) {
+      setExchangeItemName(item.name);
+      setShowInsufficientPoints(true);
+      setTimeout(() => setShowInsufficientPoints(false), 2500);
       return;
     }
     
@@ -85,6 +92,16 @@ export default function Points() {
           <div className="bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
             <CheckCircle className="w-5 h-5" />
             <span className="font-medium">成功兑换：{exchangeItemName}</span>
+          </div>
+        </div>
+      )}
+      
+      {/* Insufficient Points Toast */}
+      {showInsufficientPoints && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
+            <X className="w-5 h-5" />
+            <span className="font-medium">积分不足，无法兑换「{exchangeItemName}」</span>
           </div>
         </div>
       )}
@@ -332,11 +349,31 @@ export default function Points() {
                   兑换记录
                 </h3>
               </div>
-              <div className="p-4">
-                <div className="text-center py-8 text-gray-400">
-                  <ShoppingBag className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">暂无兑换记录</p>
-                </div>
+              <div className="divide-y divide-gray-50">
+                {myExchangeRecords.length > 0 ? (
+                  myExchangeRecords.slice(0, 5).map((record) => (
+                    <div key={record.id} className="flex items-center gap-3 px-5 py-3">
+                      <div className="w-9 h-9 bg-red-50 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Gift className="w-4 h-4 text-red-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {record.description.replace('兑换：', '')}
+                        </p>
+                        <p className="text-xs text-gray-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(record.createdAt)}
+                        </p>
+                      </div>
+                      <span className="text-sm font-bold text-red-500">-{record.points}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="px-5 py-8 text-center text-gray-400">
+                    <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">暂无兑换记录</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
