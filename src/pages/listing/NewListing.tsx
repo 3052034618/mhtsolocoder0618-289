@@ -12,15 +12,21 @@ import {
   Image as ImageIcon,
   Check,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
-import { AMENITIES_LIST, PROPERTY_TYPES, type Listing } from '@/types';
+import { AMENITIES_LIST, PROPERTY_TYPES, type DateRange } from '@/types';
 
 export default function NewListing() {
   const [step, setStep] = useState(1);
   const navigate = useNavigate();
-  const { addListing, currentUser } = useAppStore();
+  const { addListing, currentUser, canPostListing } = useAppStore();
+  
+  const canPost = currentUser ? canPostListing(currentUser.id) : false;
+  const noShowCount = currentUser?.noShowCount || 0;
+  const lowCredit = currentUser && currentUser.creditScore < 60;
   
   const [formData, setFormData] = useState({
     title: '',
@@ -38,6 +44,9 @@ export default function NewListing() {
     newRule: '',
     highlights: [] as string[],
     newHighlight: '',
+    availableDates: [] as DateRange[],
+    newDateStart: '',
+    newDateEnd: '',
   });
 
   const [photos, setPhotos] = useState<string[]>([]);
@@ -89,6 +98,29 @@ export default function NewListing() {
     }));
   };
 
+  const addAvailableDate = () => {
+    if (formData.newDateStart && formData.newDateEnd && formData.newDateStart < formData.newDateEnd) {
+      const newDate: DateRange = {
+        id: `date-${Date.now()}`,
+        startDate: formData.newDateStart,
+        endDate: formData.newDateEnd,
+      };
+      setFormData(prev => ({
+        ...prev,
+        availableDates: [...prev.availableDates, newDate],
+        newDateStart: '',
+        newDateEnd: '',
+      }));
+    }
+  };
+
+  const removeAvailableDate = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      availableDates: prev.availableDates.filter((_, i) => i !== index)
+    }));
+  };
+
   const addPhoto = () => {
     const mockPhotos = [
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=600&fit=crop',
@@ -105,9 +137,13 @@ export default function NewListing() {
   };
 
   const handleSubmit = () => {
-    const newListing: Listing = {
-      id: `listing-${Date.now()}`,
-      hostId: currentUser?.id || '',
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    
+    addListing({
+      hostId: currentUser.id,
       title: formData.title,
       description: formData.description,
       city: formData.city,
@@ -129,14 +165,11 @@ export default function NewListing() {
       })),
       coverPhoto: photos[0],
       status: 'pending',
-      avgRating: 0,
-      reviewCount: 0,
-      createdAt: new Date().toISOString(),
       isFree: true,
       highlights: formData.highlights,
-    };
+      availableDates: formData.availableDates,
+    });
     
-    addListing(newListing);
     alert('房源发布成功，等待平台审核！');
     navigate('/my-listings');
   };
@@ -151,7 +184,7 @@ export default function NewListing() {
   const canProceed = () => {
     switch (step) {
       case 1:
-        return formData.title && formData.city && formData.address && formData.propertyType;
+        return formData.title && formData.city && formData.address && formData.propertyType && formData.availableDates.length > 0;
       case 2:
         return formData.amenities.length > 0;
       case 3:
@@ -162,6 +195,45 @@ export default function NewListing() {
         return false;
     }
   };
+
+  if (!canPost) {
+    return (
+      <div className="min-h-screen bg-warm-50">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-md mx-auto bg-white rounded-2xl shadow-sm p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-3">暂时无法发布房源</h2>
+            <p className="text-gray-500 mb-6">
+              由于以下原因，你暂时无法发布房源：
+            </p>
+            <div className="bg-red-50 rounded-xl p-4 mb-6 text-left">
+              {lowCredit && (
+                <p className="text-sm text-red-600 mb-2">
+                  • 信用分过低（当前 {currentUser?.creditScore} 分，需 60 分以上）
+                </p>
+              )}
+              {noShowCount >= 3 && (
+                <p className="text-sm text-red-600">
+                  • 爽约次数过多（已 {noShowCount} 次，满 3 次限制发布）
+                </p>
+              )}
+            </div>
+            <p className="text-sm text-gray-400 mb-6">
+              保持良好的入住记录、获得更多好评可以提升信用分
+            </p>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full py-3 bg-gray-100 text-gray-600 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              返回
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-warm-50">
@@ -191,9 +263,14 @@ export default function NewListing() {
                       ? 'bg-primary-500 text-white' 
                       : 'bg-gray-100 text-gray-400'
                   }`}>
-                    {step > s.number ? <Check className="w-5 h-5" /> : s.icon}
+                    {step > s.number 
+                      ? <Check className="w-5 h-5" />
+                      : <span className="font-medium">{s.number}</span>
+                    }
                   </div>
-                  <span className={`text-xs mt-2 ${step >= s.number ? 'text-gray-700' : 'text-gray-400'}`}>
+                  <span className={`mt-2 text-xs font-medium ${
+                    step >= s.number ? 'text-primary-600' : 'text-gray-400'
+                  }`}>
                     {s.title}
                   </span>
                 </div>
@@ -381,6 +458,66 @@ export default function NewListing() {
                       <Plus className="w-5 h-5" />
                     </button>
                   </div>
+                </div>
+
+                <div>
+                  <label className="input-label">可入住时间段 <span className="text-red-500">*</span></label>
+                  <p className="text-xs text-gray-400 mb-3">设置你可以接待客人的时间段，可添加多个时间段</p>
+                  
+                  {formData.availableDates.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {formData.availableDates.map((dateRange, index) => (
+                        <div 
+                          key={dateRange.id}
+                          className="flex items-center justify-between p-3 bg-primary-50 rounded-lg"
+                        >
+                          <span className="text-sm text-primary-700 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" />
+                            {dateRange.startDate} 至 {dateRange.endDate}
+                          </span>
+                          <button 
+                            onClick={() => removeAvailableDate(index)}
+                            className="text-gray-400 hover:text-red-500"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="grid grid-cols-2 gap-3 mb-2">
+                    <div>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="date"
+                          value={formData.newDateStart}
+                          onChange={(e) => updateForm('newDateStart', e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="date"
+                          value={formData.newDateEnd}
+                          onChange={(e) => updateForm('newDateEnd', e.target.value)}
+                          className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={addAvailableDate}
+                    disabled={!formData.newDateStart || !formData.newDateEnd || formData.newDateStart >= formData.newDateEnd}
+                    className="w-full py-2 border border-dashed border-primary-300 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors flex items-center justify-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    添加时间段
+                  </button>
                 </div>
               </div>
             )}

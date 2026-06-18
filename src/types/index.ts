@@ -9,6 +9,9 @@ export interface User {
   idCard?: string;
   isVerified: boolean;
   verifyStatus: 'pending' | 'approved' | 'rejected' | 'none';
+  addressVerified: boolean;
+  addressVerifyStatus: 'pending' | 'approved' | 'rejected' | 'none';
+  addressProof?: string;
   creditScore: number;
   points: number;
   status: 'active' | 'suspended' | 'banned';
@@ -19,6 +22,7 @@ export interface User {
   hostingCount: number;
   travelCount: number;
   responseRate?: number;
+  noShowCount?: number;
 }
 
 export interface ListingPhoto {
@@ -27,6 +31,12 @@ export interface ListingPhoto {
   url: string;
   isCover: boolean;
   order: number;
+}
+
+export interface DateRange {
+  id: string;
+  startDate: string;
+  endDate: string;
 }
 
 export interface Listing {
@@ -53,6 +63,7 @@ export interface Listing {
   price?: number;
   isFree: boolean;
   highlights?: string[];
+  availableDates: DateRange[];
 }
 
 export interface AvailableDate {

@@ -11,18 +11,34 @@ import {
   Zap,
   Home,
   MessageSquare,
-  FileText
+  FileText,
+  CheckCircle
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
 import { mockExchangeItems } from '@/services/mock/data';
 
 export default function Points() {
-  const { currentUser, pointRecords, addPoints } = useAppStore();
+  const { currentUser, pointRecords, addPoints, spendPoints } = useAppStore();
   const [activeTab, setActiveTab] = useState<'records' | 'exchange'>('records');
+  const [showExchangeSuccess, setShowExchangeSuccess] = useState(false);
+  const [exchangeItemName, setExchangeItemName] = useState('');
 
   const handleSignIn = () => {
     addPoints(5, '每日签到', 'signin');
     alert('签到成功！获得5积分');
+  };
+
+  const handleExchange = (item: typeof mockExchangeItems[0]) => {
+    if (!currentUser || currentUser.points < item.points) {
+      return;
+    }
+    
+    const success = spendPoints(item.points, `兑换：${item.name}`);
+    if (success) {
+      setExchangeItemName(item.name);
+      setShowExchangeSuccess(true);
+      setTimeout(() => setShowExchangeSuccess(false), 3000);
+    }
   };
 
   const getPointsSourceLabel = (source: string) => {
@@ -58,7 +74,17 @@ export default function Points() {
   ];
 
   return (
-    <div className="min-h-screen bg-warm-50">
+    <div className="min-h-screen bg-warm-50 relative">
+      {/* Success Toast */}
+      {showExchangeSuccess && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">成功兑换：{exchangeItemName}</span>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-orange-400 text-white pt-8 pb-20">
         <div className="container mx-auto px-4">
@@ -213,10 +239,11 @@ export default function Points() {
                             <span className="font-bold text-amber-600">{item.points}</span>
                           </div>
                           <button
+                            onClick={() => handleExchange(item)}
                             disabled={(currentUser?.points || 0) < item.points}
                             className="px-4 py-1.5 bg-gradient-to-r from-primary-500 to-primary-400 text-white text-sm font-medium rounded-lg hover:from-primary-600 hover:to-primary-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            立即兑换
+                            {(currentUser?.points || 0) < item.points ? '积分不足' : '立即兑换'}
                           </button>
                         </div>
                       </div>

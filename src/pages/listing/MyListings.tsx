@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -9,13 +10,18 @@ import {
   EyeOff,
   Clock,
   CheckCircle,
-  XCircle
+  XCircle,
+  X
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
 import { mockUsers } from '@/services/mock/data';
+import type { DateRange } from '@/types';
 
 export default function MyListings() {
-  const { listings, currentUser, updateListing } = useAppStore();
+  const { listings, currentUser, updateListing, addAvailableDate, removeAvailableDate } = useAppStore();
+  const [expandedCalendar, setExpandedCalendar] = useState<string | null>(null);
+  const [newDateStart, setNewDateStart] = useState('');
+  const [newDateEnd, setNewDateEnd] = useState('');
   
   const myListings = listings.filter(l => l.hostId === currentUser?.id);
 
@@ -37,6 +43,26 @@ export default function MyListings() {
   const handleToggleStatus = (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'offline' : 'active';
     updateListing(id, { status: newStatus });
+  };
+
+  const handleToggleCalendar = (listingId: string) => {
+    if (expandedCalendar === listingId) {
+      setExpandedCalendar(null);
+      setNewDateStart('');
+      setNewDateEnd('');
+    } else {
+      setExpandedCalendar(listingId);
+      setNewDateStart('');
+      setNewDateEnd('');
+    }
+  };
+
+  const handleAddDate = (listingId: string) => {
+    if (newDateStart && newDateEnd && newDateStart < newDateEnd) {
+      addAvailableDate(listingId, newDateStart, newDateEnd);
+      setNewDateStart('');
+      setNewDateEnd('');
+    }
   };
 
   return (
@@ -161,12 +187,16 @@ export default function MyListings() {
                       >
                         <Edit className="w-4 h-4" />
                       </Link>
-                      <Link
-                        to={`/my-listings/${listing.id}/calendar`}
-                        className="p-2 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-lg transition-colors"
+                      <button
+                        onClick={() => handleToggleCalendar(listing.id)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          expandedCalendar === listing.id
+                            ? 'text-green-600 bg-green-50'
+                            : 'text-gray-400 hover:text-green-500 hover:bg-green-50'
+                        }`}
                       >
                         <Calendar className="w-4 h-4" />
-                      </Link>
+                      </button>
                       <button
                         onClick={() => handleToggleStatus(listing.id, listing.status)}
                         className={`p-2 rounded-lg transition-colors ${
@@ -183,6 +213,69 @@ export default function MyListings() {
                     </div>
                   </div>
                 </div>
+
+                {expandedCalendar === listing.id && (
+                  <div className="px-4 pb-4 border-t border-gray-100">
+                    <div className="pt-4">
+                      <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-primary-500" />
+                        可入住时间段
+                      </h4>
+                      
+                      {listing.availableDates?.length > 0 ? (
+                        <div className="space-y-2 mb-4 max-h-40 overflow-y-auto">
+                          {listing.availableDates.map((dateRange) => (
+                            <div 
+                              key={dateRange.id}
+                              className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg"
+                            >
+                              <span className="text-sm text-gray-700">
+                                {dateRange.startDate} 至 {dateRange.endDate}
+                              </span>
+                              <button 
+                                onClick={() => removeAvailableDate(listing.id, dateRange.id)}
+                                className="text-gray-400 hover:text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 mb-4">暂无可用时间段</p>
+                      )}
+                      
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <div className="relative">
+                          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            type="date"
+                            value={newDateStart}
+                            onChange={(e) => setNewDateStart(e.target.value)}
+                            className="w-full pl-8 pr-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-300"
+                          />
+                        </div>
+                        <div className="relative">
+                          <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                          <input
+                            type="date"
+                            value={newDateEnd}
+                            onChange={(e) => setNewDateEnd(e.target.value)}
+                            className="w-full pl-8 pr-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary-300"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleAddDate(listing.id)}
+                        disabled={!newDateStart || !newDateEnd || newDateStart >= newDateEnd}
+                        className="w-full py-2 border border-dashed border-primary-300 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors flex items-center justify-center gap-1 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Plus className="w-4 h-4" />
+                        添加时间段
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

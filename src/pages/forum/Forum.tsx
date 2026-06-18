@@ -9,17 +9,25 @@ import {
   TrendingUp,
   Clock,
   Filter,
-  ChevronDown
+  ChevronDown,
+  X,
+  Image as ImageIcon,
+  CheckCircle
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
-import { mockUsers } from '@/services/mock/data';
 import { CATEGORIES } from '@/types';
 
 export default function Forum() {
-  const { posts, likePost, isLoggedIn } = useAppStore();
+  const { posts, users, currentUser, addPost, likePost, isLoggedIn } = useAppStore();
   const [activeCategory, setActiveCategory] = useState('');
   const [sortBy, setSortBy] = useState('hot');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showNewPost, setShowNewPost] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState('travel');
+  const [images, setImages] = useState<string[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const filteredPosts = posts.filter(post => {
     if (activeCategory && post.category !== activeCategory) return false;
@@ -56,13 +64,71 @@ export default function Forum() {
     { tag: '安全注意', count: 64 },
   ];
 
-  const activeUsers = mockUsers
+  const activeUsers = users
     .filter(u => u.id !== 'user-6')
     .sort((a, b) => b.points - a.points)
     .slice(0, 5);
 
+  const handleImageUpload = () => {
+    const demoImages = [
+      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',
+      'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=800&h=600&fit=crop',
+    ];
+    const randomImage = demoImages[Math.floor(Math.random() * demoImages.length)];
+    if (images.length < 9) {
+      setImages([...images, randomImage]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = () => {
+    if (!title.trim() || !content.trim() || !currentUser) return;
+
+    addPost({
+      id: '',
+      authorId: currentUser.id,
+      title: title.trim(),
+      content: content.trim(),
+      category,
+      images,
+      likes: 0,
+      views: 0,
+      commentsCount: 0,
+      createdAt: '',
+      isLiked: false,
+    });
+
+    setShowNewPost(false);
+    setTitle('');
+    setContent('');
+    setCategory('travel');
+    setImages([]);
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  };
+
+  const handleCancel = () => {
+    setShowNewPost(false);
+    setTitle('');
+    setContent('');
+    setCategory('travel');
+    setImages([]);
+  };
+
   return (
     <div className="min-h-screen bg-warm-50">
+      {/* Success Toast */}
+      {showSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-bounce">
+          <CheckCircle className="w-5 h-5" />
+          <span>发布成功！获得10积分奖励</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-gradient-to-r from-secondary-600 to-secondary-500 text-white">
         <div className="container mx-auto px-4 py-12">
@@ -75,6 +141,111 @@ export default function Forum() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Main Content */}
           <div className="lg:col-span-3">
+            {/* New Post Form */}
+            {showNewPost && (
+              <div className="bg-white rounded-2xl p-6 shadow-card mb-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">发布新帖子</h2>
+                  <button
+                    onClick={handleCancel}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">标题</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="请输入帖子标题..."
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300"
+                      maxLength={100}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">分类</label>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setCategory(cat.id)}
+                          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            category === cat.id 
+                              ? 'bg-primary-500 text-white' 
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">内容</label>
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      placeholder="分享你的旅行故事、换宿经验..."
+                      rows={6}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300 resize-none"
+                      maxLength={5000}
+                    />
+                    <p className="text-xs text-gray-400 mt-1 text-right">{content.length}/5000</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      图片 <span className="text-gray-400 font-normal">（演示版，点击添加示例图片）</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                      {images.map((img, index) => (
+                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
+                          <img src={img} alt="" className="w-full h-full object-cover" />
+                          <button
+                            onClick={() => removeImage(index)}
+                            className="absolute top-1 right-1 p-1 bg-black/50 rounded-full hover:bg-black/70 transition-colors"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                      {images.length < 9 && (
+                        <button
+                          onClick={handleImageUpload}
+                          className="aspect-square rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center hover:border-primary-400 hover:bg-primary-50 transition-all"
+                        >
+                          <ImageIcon className="w-6 h-6 text-gray-400 mb-1" />
+                          <span className="text-xs text-gray-400">添加图片</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={handleCancel}
+                      className="flex-1 py-3 bg-gray-100 text-gray-600 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!title.trim() || !content.trim()}
+                      className="flex-1 py-3 bg-gradient-to-r from-primary-500 to-primary-400 text-white font-medium rounded-xl hover:from-primary-600 hover:to-primary-500 transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      发布帖子
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Search & Filter */}
             <div className="bg-white rounded-2xl p-4 shadow-card mb-6">
               <div className="flex flex-col md:flex-row gap-4">
@@ -89,14 +260,14 @@ export default function Forum() {
                   />
                 </div>
                 
-                {isLoggedIn && (
-                  <Link 
-                    to="/forum/new"
+                {isLoggedIn && !showNewPost && (
+                  <button
+                    onClick={() => setShowNewPost(true)}
                     className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-400 text-white font-medium rounded-xl hover:from-primary-600 hover:to-primary-500 transition-all shadow-md"
                   >
                     <Plus className="w-5 h-5" />
                     发布帖子
-                  </Link>
+                  </button>
                 )}
               </div>
 
@@ -157,8 +328,8 @@ export default function Forum() {
             {/* Posts List */}
             <div className="space-y-4">
               {filteredPosts.map((post) => {
-                const author = mockUsers.find(u => u.id === post.authorId);
-                const category = CATEGORIES.find(c => c.id === post.category);
+                const author = users.find(u => u.id === post.authorId);
+                const cat = CATEGORIES.find(c => c.id === post.category);
                 return (
                   <Link
                     key={post.id}
@@ -178,7 +349,7 @@ export default function Forum() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-2 py-0.5 bg-primary-50 text-primary-600 text-xs rounded-full">
-                            {category?.name || '其他'}
+                            {cat?.name || '其他'}
                           </span>
                         </div>
                         <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1 hover:text-primary-600 transition-colors">
@@ -299,12 +470,12 @@ export default function Forum() {
                 <li>• 遵守社区规范</li>
               </ul>
               {isLoggedIn ? (
-                <Link 
-                  to="/forum/new"
+                <button
+                  onClick={() => setShowNewPost(true)}
                   className="mt-4 block w-full py-2.5 bg-white/20 backdrop-blur-sm rounded-lg text-center font-medium hover:bg-white/30 transition-colors"
                 >
                   立即发帖
-                </Link>
+                </button>
               ) : (
                 <Link 
                   to="/login"

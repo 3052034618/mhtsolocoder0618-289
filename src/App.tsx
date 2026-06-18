@@ -10,11 +10,13 @@ import MyListings from '@/pages/listing/MyListings';
 import Login from '@/pages/user/Login';
 import Register from '@/pages/user/Register';
 import Profile from '@/pages/user/Profile';
+import Verify from '@/pages/user/Verify';
 import Bookings from '@/pages/booking/Bookings';
 import Messages from '@/pages/message/Messages';
 import Forum from '@/pages/forum/Forum';
 import Points from '@/pages/points/Points';
 import Admin from '@/pages/admin/Admin';
+import ReviewPage from '@/pages/review/[bookingId]';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -65,11 +67,12 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/edit" element={<Profile />} />
-          <Route path="/profile/verify" element={<Profile />} />
+          <Route path="/profile/verify" element={<Verify />} />
           <Route path="/profile/credit" element={<Profile />} />
           <Route path="/profile/settings" element={<Profile />} />
           <Route path="/bookings" element={<Bookings />} />
           <Route path="/bookings/:id" element={<Bookings />} />
+          <Route path="/review/:bookingId" element={<ReviewPage />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/messages/:id" element={<Messages />} />
           <Route path="/forum" element={<Forum />} />

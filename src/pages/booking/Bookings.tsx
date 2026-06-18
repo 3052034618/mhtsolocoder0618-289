@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { 
   Calendar, 
   Clock, 
@@ -10,21 +10,52 @@ import {
   ChevronDown,
   ChevronUp,
   User,
-  MapPin
+  MapPin,
+  AlertTriangle
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
-import { mockUsers, mockListings } from '@/services/mock/data';
 
 export default function Bookings() {
-  const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get('type');
+  const [activeTab, setActiveTab] = useState<'received' | 'sent'>(
+    typeParam === 'sent' ? 'sent' : 'received'
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { bookings, currentUser, updateBooking } = useAppStore();
+  const { bookings, currentUser, acceptBooking, rejectBooking, listings, users } = useAppStore();
+
+  useEffect(() => {
+    if (typeParam === 'sent') {
+      setActiveTab('sent');
+    } else if (typeParam === 'received') {
+      setActiveTab('received');
+    }
+  }, [typeParam]);
 
   const myBookings = bookings.filter(b => 
     activeTab === 'received' 
       ? b.hostId === currentUser?.id
       : b.guestId === currentUser?.id
   );
+
+  const sortedBookings = [...myBookings].sort((a, b) => {
+    if (a.status === 'pending' && b.status !== 'pending') return -1;
+    if (a.status !== 'pending' && b.status === 'pending') return 1;
+    
+    if (activeTab === 'received' && a.status === 'pending' && b.status === 'pending') {
+      const guestA = users.find(u => u.id === a.guestId);
+      const guestB = users.find(u => u.id === b.guestId);
+      const scoreA = guestA?.creditScore || 0;
+      const scoreB = guestB?.creditScore || 0;
+      const noShowA = guestA?.noShowCount || 0;
+      const noShowB = guestB?.noShowCount || 0;
+      const rankA = scoreA - noShowA * 10;
+      const rankB = scoreB - noShowB * 10;
+      return rankB - rankA;
+    }
+    
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   const getStatusInfo = (status: string) => {
     switch (status) {
@@ -46,11 +77,11 @@ export default function Bookings() {
   };
 
   const handleAccept = (id: string) => {
-    updateBooking(id, { status: 'accepted' });
+    acceptBooking(id);
   };
 
   const handleReject = (id: string) => {
-    updateBooking(id, { status: 'rejected' });
+    rejectBooking(id);
   };
 
   const toggleExpand = (id: string) => {
@@ -109,14 +140,15 @@ export default function Bookings() {
 
         {/* Bookings List */}
         <div className="space-y-4">
-          {myBookings.length > 0 ? (
-            myBookings.map((booking) => {
-              const listing = mockListings.find(l => l.id === booking.listingId);
+          {sortedBookings.length > 0 ? (
+            sortedBookings.map((booking) => {
+              const listing = listings.find(l => l.id === booking.listingId);
               const otherUser = activeTab === 'received'
-                ? mockUsers.find(u => u.id === booking.guestId)
-                : mockUsers.find(u => u.id === booking.hostId);
+                ? users.find(u => u.id === booking.guestId)
+                : users.find(u => u.id === booking.hostId);
               const statusInfo = getStatusInfo(booking.status);
               const isExpanded = expandedId === booking.id;
+              const noShowCount = otherUser?.noShowCount || 0;
 
               return (
                 <div 
@@ -204,6 +236,12 @@ export default function Bookings() {
                                 {otherUser?.isVerified && (
                                   <span className="text-green-600 text-xs">已认证</span>
                                 )}
+                                {noShowCount > 0 && (
+                                  <span className="text-red-500 text-xs flex items-center gap-0.5">
+                                    <AlertTriangle className="w-3 h-3" />
+                                    {noShowCount}次爽约
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -256,7 +294,7 @@ export default function Bookings() {
                             <>
                               {!booking.guestReviewSubmitted && activeTab === 'sent' ? (
                                 <Link
-                                  to={`/reviews/${booking.id}`}
+                                  to={`/review/${booking.id}`}
                                   className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-400 text-white font-medium rounded-xl hover:from-amber-600 hover:to-amber-500 transition-all text-center"
                                 >
                                   <Star className="w-5 h-5 inline mr-2" />
@@ -264,7 +302,7 @@ export default function Bookings() {
                                 </Link>
                               ) : !booking.hostReviewSubmitted && activeTab === 'received' ? (
                                 <Link
-                                  to={`/reviews/${booking.id}`}
+                                  to={`/review/${booking.id}`}
                                   className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-400 text-white font-medium rounded-xl hover:from-amber-600 hover:to-amber-500 transition-all text-center"
                                 >
                                   <Star className="w-5 h-5 inline mr-2" />
@@ -272,7 +310,7 @@ export default function Bookings() {
                                 </Link>
                               ) : (
                                 <p className="text-center text-green-600 font-medium">
-                                  ✓ 已完成互评
+                                  ✓ 已完成评价
                                 </p>
                               )}
                               <button className="w-full py-3 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-all">

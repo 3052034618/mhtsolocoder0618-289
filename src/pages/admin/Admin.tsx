@@ -17,22 +17,36 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  MessageSquare
+  MessageSquare,
+  MapPin
 } from 'lucide-react';
-import { mockUsers, mockListings } from '@/services/mock/data';
+import useAppStore from '@/store/useAppStore';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [verifyTab, setVerifyTab] = useState<'identity' | 'address'>('identity');
+  const { 
+    users, 
+    listings, 
+    approveIdentityVerify, 
+    rejectIdentityVerify,
+    approveAddressVerify,
+    rejectAddressVerify,
+    updateListing
+  } = useAppStore();
 
   const menuItems = [
     { key: 'dashboard', label: '数据概览', icon: <LayoutDashboard className="w-5 h-5" /> },
     { key: 'users', label: '用户管理', icon: <Users className="w-5 h-5" /> },
+    { key: 'verify', label: '认证审核', icon: <Shield className="w-5 h-5" /> },
     { key: 'listings', label: '房源审核', icon: <Home className="w-5 h-5" /> },
     { key: 'disputes', label: '争议处理', icon: <AlertTriangle className="w-5 h-5" /> },
   ];
 
-  const pendingListings = mockListings.filter(l => l.status === 'pending');
-  const pendingVerifications = mockUsers.filter(u => u.verifyStatus === 'pending');
+  const pendingListings = listings.filter(l => l.status === 'pending');
+  const pendingIdentityVerifications = users.filter(u => u.verifyStatus === 'pending');
+  const pendingAddressVerifications = users.filter(u => u.addressVerifyStatus === 'pending');
+  const pendingVerifications = pendingIdentityVerifications;
 
   const stats = [
     { label: '总用户数', value: '12,580', change: '+125', icon: <Users className="w-6 h-6" />, color: 'bg-blue-50 text-blue-500' },
@@ -107,7 +121,7 @@ export default function Admin() {
               </div>
               <div className="flex items-center gap-3">
                 <img 
-                  src={mockUsers[5].avatar} 
+                  src={users[0]?.avatar || ''} 
                   alt=""
                   className="w-9 h-9 rounded-full"
                 />
@@ -184,14 +198,14 @@ export default function Admin() {
                   <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="font-semibold text-gray-900">待认证用户</h3>
                     <button 
-                      onClick={() => setActiveTab('users')}
+                      onClick={() => setActiveTab('verify')}
                       className="text-sm text-primary-600 hover:text-primary-700"
                     >
                       查看全部
                     </button>
                   </div>
                   <div className="divide-y divide-gray-50">
-                    {pendingVerifications.slice(0, 5).map((user) => (
+                    {pendingIdentityVerifications.slice(0, 5).map((user) => (
                       <div key={user.id} className="px-6 py-4 flex items-center gap-4">
                         <img 
                           src={user.avatar} 
@@ -205,7 +219,7 @@ export default function Admin() {
                         <span className="badge-warning">待认证</span>
                       </div>
                     ))}
-                    {pendingVerifications.length === 0 && (
+                    {pendingIdentityVerifications.length === 0 && (
                       <div className="px-6 py-8 text-center text-gray-400 text-sm">
                         暂无待认证用户
                       </div>
@@ -238,7 +252,7 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {mockUsers.slice(0, 5).map((user) => (
+                  {users.slice(0, 5).map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -291,6 +305,168 @@ export default function Admin() {
             </div>
           )}
 
+          {/* Verify */}
+          {activeTab === 'verify' && (
+            <div className="space-y-6">
+              {/* Tabs */}
+              <div className="bg-white rounded-2xl shadow-sm p-1 inline-flex">
+                {[
+                  { key: 'identity', label: '实名认证', count: pendingIdentityVerifications.length },
+                  { key: 'address', label: '地址核验', count: pendingAddressVerifications.length },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setVerifyTab(tab.key as 'identity' | 'address')}
+                    className={`px-6 py-2 rounded-xl font-medium text-sm transition-all ${
+                      verifyTab === tab.key
+                        ? 'bg-primary-500 text-white shadow-md'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {tab.label}
+                    <span className={`ml-2 text-xs ${
+                      verifyTab === tab.key ? 'text-white/80' : 'text-gray-400'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Identity Verify List */}
+              {verifyTab === 'identity' && (
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="divide-y divide-gray-100">
+                    {pendingIdentityVerifications.length > 0 ? (
+                      pendingIdentityVerifications.map((user) => (
+                        <div key={user.id} className="p-6">
+                          <div className="flex gap-6">
+                            <img 
+                              src={user.avatar} 
+                              alt=""
+                              className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-1">{user.nickname}</h4>
+                              <p className="text-sm text-gray-500 mb-3">{user.email}</p>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-500 mb-1">真实姓名</p>
+                                  <p className="font-medium text-gray-900">{user.realName || '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 mb-1">身份证号</p>
+                                  <p className="font-medium text-gray-900 font-mono">{user.idCard || '-'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-3">
+                                <span className="text-xs text-gray-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  申请时间：{new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-center gap-2">
+                              <button 
+                                onClick={() => approveIdentityVerify(user.id)}
+                                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                              >
+                                <Check className="w-4 h-4" />
+                                通过
+                              </button>
+                              <button 
+                                onClick={() => rejectIdentityVerify(user.id)}
+                                className="px-4 py-2 bg-red-50 text-red-500 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                              >
+                                <X className="w-4 h-4" />
+                                拒绝
+                              </button>
+                              <button className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                查看详情
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <Shield className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>暂无待审核的实名认证</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Address Verify List */}
+              {verifyTab === 'address' && (
+                <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div className="divide-y divide-gray-100">
+                    {pendingAddressVerifications.length > 0 ? (
+                      pendingAddressVerifications.map((user) => (
+                        <div key={user.id} className="p-6">
+                          <div className="flex gap-6">
+                            <img 
+                              src={user.avatar} 
+                              alt=""
+                              className="w-16 h-16 rounded-full object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-1">{user.nickname}</h4>
+                              <p className="text-sm text-gray-500 mb-3">{user.email}</p>
+                              <div className="space-y-2 text-sm">
+                                <div>
+                                  <p className="text-gray-500 mb-1">居住地址</p>
+                                  <p className="font-medium text-gray-900">{user.location || '-'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-500 mb-1">证明材料</p>
+                                  <p className="font-medium text-gray-900">{user.addressProof || '-'}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 mt-3">
+                                <span className="text-xs text-gray-400 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  申请时间：{new Date(user.createdAt).toLocaleDateString('zh-CN')}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-col justify-center gap-2">
+                              <button 
+                                onClick={() => approveAddressVerify(user.id)}
+                                className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                              >
+                                <Check className="w-4 h-4" />
+                                通过
+                              </button>
+                              <button 
+                                onClick={() => rejectAddressVerify(user.id)}
+                                className="px-4 py-2 bg-red-50 text-red-500 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                              >
+                                <X className="w-4 h-4" />
+                                拒绝
+                              </button>
+                              <button className="px-4 py-2 text-gray-500 text-sm font-medium hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-1">
+                                <Eye className="w-4 h-4" />
+                                查看详情
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-12 text-center text-gray-400">
+                        <MapPin className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>暂无待审核的地址核验</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Listings */}
           {activeTab === 'listings' && (
             <div className="space-y-6">
@@ -298,8 +474,8 @@ export default function Admin() {
               <div className="bg-white rounded-2xl shadow-sm p-1 inline-flex">
                 {[
                   { key: 'pending', label: '待审核', count: pendingListings.length },
-                  { key: 'approved', label: '已通过', count: mockListings.filter(l => l.status === 'active').length },
-                  { key: 'rejected', label: '已拒绝', count: mockListings.filter(l => l.status === 'rejected').length },
+                  { key: 'approved', label: '已通过', count: listings.filter(l => l.status === 'active').length },
+                  { key: 'rejected', label: '已拒绝', count: listings.filter(l => l.status === 'rejected').length },
                 ].map((tab) => (
                   <button
                     key={tab.key}
@@ -317,7 +493,7 @@ export default function Admin() {
               <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <div className="divide-y divide-gray-100">
                   {pendingListings.map((listing) => {
-                    const host = mockUsers.find(u => u.id === listing.hostId);
+                    const host = users.find(u => u.id === listing.hostId);
                     return (
                       <div key={listing.id} className="p-6">
                         <div className="flex gap-6">
@@ -349,11 +525,17 @@ export default function Admin() {
                             </div>
                           </div>
                           <div className="flex flex-col justify-center gap-2">
-                            <button className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1">
+                            <button 
+                              onClick={() => updateListing(listing.id, { status: 'active' })}
+                              className="px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors flex items-center gap-1"
+                            >
                               <Check className="w-4 h-4" />
                               通过
                             </button>
-                            <button className="px-4 py-2 bg-red-50 text-red-500 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1">
+                            <button 
+                              onClick={() => updateListing(listing.id, { status: 'rejected' })}
+                              className="px-4 py-2 bg-red-50 text-red-500 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center gap-1"
+                            >
                               <X className="w-4 h-4" />
                               拒绝
                             </button>

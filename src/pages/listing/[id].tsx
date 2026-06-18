@@ -51,13 +51,14 @@ const amenityIcons: Record<string, React.ReactNode> = {
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getListingById, isLoggedIn, currentUser } = useAppStore();
+  const { getListingById, isLoggedIn, currentUser, addBooking } = useAppStore();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
   const [message, setMessage] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   const listing = getListingById(id || '');
   const host = listing ? mockUsers.find(u => u.id === listing.hostId) : null;
@@ -96,8 +97,41 @@ export default function ListingDetail() {
   };
 
   const submitBooking = () => {
-    alert('预约申请已发送！房东会尽快回复您。');
+    setSubmitError('');
+    
+    if (!checkIn || !checkOut) {
+      setSubmitError('请选择入住和退房日期');
+      return;
+    }
+    
+    if (new Date(checkIn) >= new Date(checkOut)) {
+      setSubmitError('退房日期必须晚于入住日期');
+      return;
+    }
+    
+    if (guests <= 0 || guests > listing.maxGuests) {
+      setSubmitError(`入住人数不能超过 ${listing.maxGuests} 人`);
+      return;
+    }
+    
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+    
+    addBooking({
+      listingId: listing.id,
+      hostId: listing.hostId,
+      guestId: currentUser.id,
+      checkIn,
+      checkOut,
+      guests,
+      message,
+      status: 'pending',
+    });
+    
     setShowBookingModal(false);
+    navigate('/bookings?type=sent');
   };
 
   return (
@@ -497,6 +531,12 @@ export default function ListingDetail() {
                 />
               </div>
             </div>
+
+            {submitError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-100 rounded-lg">
+                <p className="text-sm text-red-600">{submitError}</p>
+              </div>
+            )}
 
             <div className="mt-6 p-4 bg-amber-50 rounded-xl">
               <p className="text-sm text-amber-800">

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Star, MapPin, X, Users, ChevronDown } from 'lucide-react';
+import { Search, SlidersHorizontal, Star, MapPin, X, Users, ChevronDown, Calendar } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
 import ListingCard from '@/components/common/ListingCard';
 import { mockUsers } from '@/services/mock/data';
@@ -13,7 +13,11 @@ export default function SearchPage() {
   const { listings } = useAppStore();
 
   const city = searchParams.get('city') || '';
+  const checkInParam = searchParams.get('checkIn') || '';
+  const checkOutParam = searchParams.get('checkOut') || '';
   const [searchCity, setSearchCity] = useState(city);
+  const [checkIn, setCheckIn] = useState(checkInParam);
+  const [checkOut, setCheckOut] = useState(checkOutParam);
 
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
   const [selectedPropertyType, setSelectedPropertyType] = useState('');
@@ -22,11 +26,26 @@ export default function SearchPage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchCity) {
-      setSearchParams({ city: searchCity });
-    } else {
-      setSearchParams({});
-    }
+    const params: Record<string, string> = {};
+    if (searchCity) params.city = searchCity;
+    if (checkIn) params.checkIn = checkIn;
+    if (checkOut) params.checkOut = checkOut;
+    setSearchParams(params);
+  };
+
+  const isDateInRange = (dateStr: string, start: string, end: string): boolean => {
+    const date = new Date(dateStr);
+    return date >= new Date(start) && date <= new Date(end);
+  };
+
+  const hasAvailableDates = (listing: any, checkInStr: string, checkOutStr: string): boolean => {
+    if (!checkInStr || !checkOutStr) return true;
+    if (!listing.availableDates || listing.availableDates.length === 0) return false;
+    const checkInDate = new Date(checkInStr);
+    const checkOutDate = new Date(checkOutStr);
+    return listing.availableDates.some((range: any) => 
+      checkInDate >= new Date(range.startDate) && checkOutDate <= new Date(range.endDate)
+    );
   };
 
   const toggleAmenity = (amenity: string) => {
@@ -42,6 +61,8 @@ export default function SearchPage() {
     setSelectedPropertyType('');
     setMinRating(0);
     setGuests(0);
+    setCheckIn('');
+    setCheckOut('');
   };
 
   const filteredListings = useMemo(() => {
@@ -52,6 +73,10 @@ export default function SearchPage() {
         l.city.toLowerCase().includes(city.toLowerCase()) ||
         l.title.toLowerCase().includes(city.toLowerCase())
       );
+    }
+
+    if (checkInParam && checkOutParam) {
+      result = result.filter(l => hasAvailableDates(l, checkInParam, checkOutParam));
     }
 
     if (selectedPropertyType) {
@@ -87,7 +112,7 @@ export default function SearchPage() {
     }
 
     return result;
-  }, [listings, city, selectedPropertyType, minRating, guests, selectedAmenities, sortBy]);
+  }, [listings, city, checkInParam, checkOutParam, selectedPropertyType, minRating, guests, selectedAmenities, sortBy]);
 
   const activeFiltersCount = 
     (selectedAmenities.length > 0 ? 1 : 0) +
@@ -100,7 +125,7 @@ export default function SearchPage() {
       {/* Search Header */}
       <div className="sticky top-16 z-40 bg-white border-b border-gray-100 shadow-sm">
         <div className="container mx-auto px-4 py-4">
-          <form onSubmit={handleSearch} className="flex gap-3">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
             <div className="flex-1 relative">
               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -110,6 +135,26 @@ export default function SearchPage() {
                 onChange={(e) => setSearchCity(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition-all"
               />
+            </div>
+            <div className="flex gap-3">
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={checkIn}
+                  onChange={(e) => setCheckIn(e.target.value)}
+                  className="w-full md:w-40 pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition-all"
+                />
+              </div>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="date"
+                  value={checkOut}
+                  onChange={(e) => setCheckOut(e.target.value)}
+                  className="w-full md:w-40 pl-9 pr-3 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-primary-400 transition-all"
+                />
+              </div>
             </div>
             <button 
               type="submit"
@@ -121,10 +166,10 @@ export default function SearchPage() {
             <button 
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-4 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
-                showFilters || activeFiltersCount > 0
-                  ? 'bg-primary-50 text-primary-600 border border-primary-200'
-                  : 'bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100'
+              className={`px-4 py-3 rounded-xl border transition-all flex items-center gap-2 ${
+                showFilters 
+                  ? 'border-primary-300 bg-primary-50 text-primary-600' 
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
               }`}
             >
               <SlidersHorizontal className="w-5 h-5" />

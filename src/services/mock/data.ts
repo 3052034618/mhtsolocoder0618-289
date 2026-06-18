@@ -12,6 +12,8 @@ export const mockUsers: User[] = [
     idCard: '110101********1234',
     isVerified: true,
     verifyStatus: 'approved',
+    addressVerified: true,
+    addressVerifyStatus: 'approved',
     creditScore: 92,
     points: 2580,
     status: 'active',
@@ -22,6 +24,7 @@ export const mockUsers: User[] = [
     hostingCount: 15,
     travelCount: 23,
     responseRate: 95,
+    noShowCount: 0,
   },
   {
     id: 'user-2',
@@ -44,6 +47,9 @@ export const mockUsers: User[] = [
     hostingCount: 8,
     travelCount: 12,
     responseRate: 88,
+    addressVerified: true,
+    addressVerifyStatus: 'approved',
+    noShowCount: 0,
   },
   {
     id: 'user-3',
@@ -66,6 +72,9 @@ export const mockUsers: User[] = [
     hostingCount: 3,
     travelCount: 5,
     responseRate: 75,
+    addressVerified: false,
+    addressVerifyStatus: 'none',
+    noShowCount: 0,
   },
   {
     id: 'user-4',
@@ -88,6 +97,9 @@ export const mockUsers: User[] = [
     hostingCount: 28,
     travelCount: 35,
     responseRate: 98,
+    addressVerified: true,
+    addressVerifyStatus: 'approved',
+    noShowCount: 0,
   },
   {
     id: 'user-5',
@@ -110,6 +122,9 @@ export const mockUsers: User[] = [
     hostingCount: 5,
     travelCount: 8,
     responseRate: 80,
+    addressVerified: true,
+    addressVerifyStatus: 'approved',
+    noShowCount: 0,
   },
   {
     id: 'user-6',
@@ -130,6 +145,9 @@ export const mockUsers: User[] = [
     hostingCount: 0,
     travelCount: 0,
     responseRate: 100,
+    addressVerified: true,
+    addressVerifyStatus: 'approved',
+    noShowCount: 0,
   },
 ];
 
@@ -161,6 +179,10 @@ export const mockListings: Listing[] = [
     createdAt: '2024-02-01T00:00:00Z',
     isFree: true,
     highlights: ['胡同文化', '交通便利', '四合院体验'],
+    availableDates: [
+      { id: 'd1', startDate: '2024-07-01', endDate: '2024-08-31' },
+      { id: 'd2', startDate: '2024-10-01', endDate: '2024-10-15' },
+    ],
   },
   {
     id: 'listing-2',
@@ -188,6 +210,9 @@ export const mockListings: Listing[] = [
     createdAt: '2024-03-15T00:00:00Z',
     isFree: true,
     highlights: ['江景', '市中心', '现代简约'],
+    availableDates: [
+      { id: 'd3', startDate: '2024-07-10', endDate: '2024-09-30' },
+    ],
   },
   {
     id: 'listing-3',
@@ -215,6 +240,10 @@ export const mockListings: Listing[] = [
     createdAt: '2024-01-20T00:00:00Z',
     isFree: true,
     highlights: ['西湖景', '茶园', '安静清幽'],
+    availableDates: [
+      { id: 'd4', startDate: '2024-06-01', endDate: '2024-07-31' },
+      { id: 'd5', startDate: '2024-09-01', endDate: '2024-11-30' },
+    ],
   },
   {
     id: 'listing-4',
@@ -241,6 +270,9 @@ export const mockListings: Listing[] = [
     createdAt: '2024-06-01T00:00:00Z',
     isFree: true,
     highlights: ['市中心', '美食多', '可带宠物'],
+    availableDates: [
+      { id: 'd6', startDate: '2024-08-01', endDate: '2024-12-31' },
+    ],
   },
   {
     id: 'listing-5',
@@ -267,6 +299,10 @@ export const mockListings: Listing[] = [
     createdAt: '2024-04-10T00:00:00Z',
     isFree: true,
     highlights: ['科技园', '商务', '现代化'],
+    availableDates: [
+      { id: 'd7', startDate: '2024-07-01', endDate: '2024-08-15' },
+      { id: 'd8', startDate: '2024-09-01', endDate: '2024-10-31' },
+    ],
   },
   {
     id: 'listing-6',
@@ -293,6 +329,10 @@ export const mockListings: Listing[] = [
     createdAt: '2024-05-01T00:00:00Z',
     isFree: true,
     highlights: ['Loft', '商圈', '设计感'],
+    availableDates: [
+      { id: 'd9', startDate: '2024-06-15', endDate: '2024-07-31' },
+      { id: 'd10', startDate: '2024-09-15', endDate: '2024-12-15' },
+    ],
   },
 ];
 
