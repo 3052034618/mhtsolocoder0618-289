@@ -63,6 +63,8 @@ export default function SearchPage() {
     setGuests(0);
     setCheckIn('');
     setCheckOut('');
+    setSearchCity('');
+    setSearchParams({});
   };
 
   const filteredListings = useMemo(() => {

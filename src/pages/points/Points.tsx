@@ -23,6 +23,10 @@ export default function Points() {
   const [showExchangeSuccess, setShowExchangeSuccess] = useState(false);
   const [exchangeItemName, setExchangeItemName] = useState('');
 
+  const myPointRecords = currentUser 
+    ? pointRecords.filter(r => r.userId === currentUser.id)
+    : [];
+
   const handleSignIn = () => {
     addPoints(5, '每日签到', 'signin');
     alert('签到成功！获得5积分');
@@ -172,34 +176,41 @@ export default function Points() {
                   <h3 className="font-semibold text-gray-900">积分记录</h3>
                 </div>
                 <div className="divide-y divide-gray-50">
-                  {pointRecords.map((record) => (
-                    <div key={record.id} className="flex items-center gap-4 px-6 py-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        record.type === 'earn' ? 'bg-green-50' : 'bg-red-50'
-                      }`}>
-                        {record.type === 'earn' 
-                          ? <TrendingUp className="w-5 h-5 text-green-500" />
-                          : <TrendingDown className="w-5 h-5 text-red-500" />
-                        }
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{record.description}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-gray-400">{getPointsSourceLabel(record.source)}</span>
-                          <span className="text-xs text-gray-400">·</span>
-                          <span className="text-xs text-gray-400 flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {formatDate(record.createdAt)}
-                          </span>
+                  {myPointRecords.length > 0 ? (
+                    myPointRecords.map((record) => (
+                      <div key={record.id} className="flex items-center gap-4 px-6 py-4">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          record.type === 'earn' ? 'bg-green-50' : 'bg-red-50'
+                        }`}>
+                          {record.type === 'earn' 
+                            ? <TrendingUp className="w-5 h-5 text-green-500" />
+                            : <TrendingDown className="w-5 h-5 text-red-500" />
+                          }
                         </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{record.description}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-400">{getPointsSourceLabel(record.source)}</span>
+                            <span className="text-xs text-gray-400">·</span>
+                            <span className="text-xs text-gray-400 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {formatDate(record.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`text-lg font-bold ${
+                          record.type === 'earn' ? 'text-green-500' : 'text-red-500'
+                        }`}>
+                          {record.type === 'earn' ? '+' : '-'}{record.points}
+                        </span>
                       </div>
-                      <span className={`text-lg font-bold ${
-                        record.type === 'earn' ? 'text-green-500' : 'text-red-500'
-                      }`}>
-                        {record.type === 'earn' ? '+' : '-'}{record.points}
-                      </span>
+                    ))
+                  ) : (
+                    <div className="px-6 py-16 text-center text-gray-400">
+                      <Clock className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                      <p>暂无积分记录</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             ) : (

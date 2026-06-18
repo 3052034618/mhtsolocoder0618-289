@@ -30,7 +30,6 @@ import {
   Clock
 } from 'lucide-react';
 import useAppStore from '@/store/useAppStore';
-import { mockUsers } from '@/services/mock/data';
 import { AMENITIES_LIST, REVIEW_TAGS_HOST } from '@/types';
 
 const amenityIcons: Record<string, React.ReactNode> = {
@@ -51,7 +50,7 @@ const amenityIcons: Record<string, React.ReactNode> = {
 export default function ListingDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getListingById, isLoggedIn, currentUser, addBooking } = useAppStore();
+  const { getListingById, isLoggedIn, currentUser, addBooking, getReviewsByListing, users } = useAppStore();
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [checkIn, setCheckIn] = useState('');
@@ -61,7 +60,8 @@ export default function ListingDetail() {
   const [submitError, setSubmitError] = useState('');
 
   const listing = getListingById(id || '');
-  const host = listing ? mockUsers.find(u => u.id === listing.hostId) : null;
+  const host = listing ? users.find(u => u.id === listing.hostId) : null;
+  const reviews = listing ? getReviewsByListing(listing.id) : [];
 
   if (!listing || !host) {
     return (
@@ -313,66 +313,85 @@ export default function ListingDetail() {
 
               {/* Rating Breakdown */}
               <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-gray-100">
-                {REVIEW_TAGS_HOST.map((tag) => (
-                  <span 
-                    key={tag}
-                    className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
-                  >
-                    {tag}
-                  </span>
-                ))}
+                {(reviews.length > 0 
+                  ? [...new Set(reviews.flatMap(r => r.tags))].map(tag => (
+                      <span 
+                        key={tag}
+                        className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  : REVIEW_TAGS_HOST.slice(0, 4).map(tag => (
+                      <span 
+                        key={tag}
+                        className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                )}
               </div>
 
               {/* Reviews List */}
               <div className="space-y-6">
-                {[
-                  {
-                    id: '1',
-                    user: mockUsers[1],
-                    rating: 5,
-                    content: '非常棒的体验！四合院很有北京特色，房东人也很热情，给我们推荐了很多好吃的地方。位置也很好，去哪都方便。强烈推荐！',
-                    date: '2024年7月',
-                  },
-                  {
-                    id: '2',
-                    user: mockUsers[3],
-                    rating: 4,
-                    content: '整体很不错，位置便利，房间干净。唯一的小缺点是卫生间稍微小了一点，但完全可以接受。',
-                    date: '2024年6月',
-                  },
-                ].map((review) => (
-                  <div key={review.id} className="flex gap-4">
-                    <img 
-                      src={review.user.avatar} 
-                      alt={review.user.nickname}
-                      className="w-11 h-11 rounded-full object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-gray-900">{review.user.nickname}</span>
-                        <span className="text-sm text-gray-400">{review.date}</span>
+                {reviews.length > 0 ? (
+                  reviews.slice(0, 2).map((review) => {
+                    const reviewer = users.find(u => u.id === review.reviewerId);
+                    const reviewDate = new Date(review.createdAt);
+                    return (
+                      <div key={review.id} className="flex gap-4">
+                        <img 
+                          src={reviewer?.avatar} 
+                          alt={reviewer?.nickname}
+                          className="w-11 h-11 rounded-full object-cover flex-shrink-0"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-900">{reviewer?.nickname || '匿名用户'}</span>
+                            <span className="text-sm text-gray-400">
+                              {reviewDate.getFullYear()}年{reviewDate.getMonth() + 1}月
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {[...Array(5)].map((_, i) => (
+                              <Star 
+                                key={i} 
+                                className={`w-3.5 h-3.5 ${
+                                  i < review.rating 
+                                    ? 'text-amber-400 fill-amber-400' 
+                                    : 'text-gray-200'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {review.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {review.tags.map(tag => (
+                                <span key={tag} className="text-xs px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <p className="text-sm text-gray-600 leading-relaxed">{review.content}</p>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star 
-                            key={i} 
-                            className={`w-3.5 h-3.5 ${
-                              i < review.rating 
-                                ? 'text-amber-400 fill-amber-400' 
-                                : 'text-gray-200'
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-sm text-gray-600 leading-relaxed">{review.content}</p>
-                    </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 text-gray-400">
+                    <Star className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                    <p>暂无评价，成为第一个评价的人吧！</p>
                   </div>
-                ))}
+                )}
               </div>
 
-              <button className="w-full mt-6 py-3 text-primary-600 font-medium hover:bg-primary-50 rounded-xl transition-colors">
-                查看全部 {listing.reviewCount} 条评价
-              </button>
+              {listing.reviewCount > 2 && (
+                <button className="w-full mt-6 py-3 text-primary-600 font-medium hover:bg-primary-50 rounded-xl transition-colors">
+                  查看全部 {listing.reviewCount} 条评价
+                </button>
+              )}
             </div>
           </div>
 
